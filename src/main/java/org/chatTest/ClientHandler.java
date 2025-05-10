@@ -37,11 +37,11 @@ public class ClientHandler implements Runnable{
         } catch (Exception e) {
             e.printStackTrace(System.err);
         } finally {
-            try {
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace(System.err);
-            }
+//            try {
+//                socket.close();
+//            } catch (IOException e) {
+//                e.printStackTrace(System.err);
+//            }
         }
     }
     private void handleRegister(String request) throws Exception{
@@ -64,9 +64,11 @@ public class ClientHandler implements Runnable{
         }
         catch (RegisterFailException e){
             out.writeObject("注册失败");
+            return;
         }
         catch (UserExistsException e){
             out.writeObject("用户名已存在");
+            return;
         }
         out.writeObject("注册成功");
         out.flush();
@@ -81,10 +83,12 @@ public class ClientHandler implements Runnable{
             if(result.containsKey("userId")){
                 int userId = (int) result.get("userId");
                 out.writeObject("LOGIN_SUCCESS:"+userId);
+                out.flush();
             }
         }
         catch (LoginFailException e){
             out.writeObject("登录失败"+e.getMessage());
+            out.flush();
         }
 
     }
