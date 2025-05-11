@@ -66,7 +66,7 @@ public class Client {
 //    }
 //}
 
-    public static void connectToServer(String message) {
+    public static boolean connectToServer(String message) {
         try {
             Socket socket = new Socket(SERVER_IP, SERVER_PORT);
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
@@ -81,16 +81,19 @@ public class Client {
             if (response != null && response.startsWith("LOGIN_SUCCESS")) {
                 int userId = Integer.parseInt(response.split(":")[1]);
                 new ChatJFrame(userId, socket, in, out); // 传入所有资源
+                return true;
             } else {
                 MessageUtils.showErrorMessage(response == null ? "空响应" : response);
                 in.close();
                 out.close();
                 socket.close();
+                return false;
             }
 
         } catch (Exception e) {
             e.printStackTrace(System.err);
             MessageUtils.showErrorMessage("连接失败：" + e.getMessage());
+            return false;
         }
     }
 }

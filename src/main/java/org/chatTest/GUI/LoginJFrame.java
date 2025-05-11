@@ -71,7 +71,10 @@ public class LoginJFrame extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 String username = usernameField.getText();
                 String password = new String(passwordField.getPassword());
-                Client.connectToServer("LOGIN:" + username + ":" + password);
+                if (Client.connectToServer("LOGIN:" + username + ":" + password)) {
+                    setVisible(false);
+                }
+
             }
         });
 
@@ -84,8 +87,12 @@ public class LoginJFrame extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String username = usernameField.getText();
-                String password = new String(passwordField.getPassword());
-                Client.connectToServer("REGISTER:" + username + ":" + password);
+                String password = null;
+                if((password = new String(passwordField.getPassword())).isEmpty()) {
+                    JOptionPane.showMessageDialog(passwordField, "密码不能为空", "错误", JOptionPane.ERROR_MESSAGE);
+                }
+                else
+                    Client.connectToServer("REGISTER:" + username + ":" + password);
             }
         });
 
