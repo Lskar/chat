@@ -6,9 +6,7 @@ import org.chatTest.Exception.UserExistsException;
 
 import java.io.FileReader;
 import java.sql.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.logging.Logger;
 
 public class SQLUtils {
@@ -113,6 +111,23 @@ public class SQLUtils {
                 throw new UserExistsException("REGISTER_USER_EXISTS");
             }
         }
+    }
+    public static String[] getFriends(int userId) throws SQLException {
+        String sql = "SELECT friend_id FROM friends WHERE user_id = ?";
+        List<String> friends = new ArrayList<>();
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                int friendId = rs.getInt("friend_id");
+                friends.add("User" + friendId);
+            }
+        }
+        return friends.toArray(new String[0]);
     }
 
     public static Map<String, Object> loginUser(String username, String password) throws Exception{

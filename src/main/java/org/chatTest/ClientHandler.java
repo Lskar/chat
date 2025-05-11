@@ -32,6 +32,11 @@ public class ClientHandler implements Runnable {
             if (request.startsWith("LOGIN")) {
                 handleLogin(request);
             }
+            if (request.startsWith("REQUEST_FRIENDS")) {
+                handleRequestFriends(request);
+            }
+
+
 
             while (true) {
                 try {
@@ -61,11 +66,11 @@ public class ClientHandler implements Runnable {
         } catch (Exception e) {
             e.printStackTrace(System.err);
         } finally {
-//            try {
-//                socket.close();
-//            } catch (IOException e) {
-//                e.printStackTrace(System.err);
-//            }
+            try {
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace(System.err);
+            }
         }
     }
 
@@ -73,17 +78,6 @@ public class ClientHandler implements Runnable {
         String[] parts = request.split(":");
         String username = parts[1];
         String password = parts[2];
-//        String message = SQLUtils.registerUser(username, password);
-//        if(message.startsWith("REGISTER_SUCCESS")){
-//            out.writeObject("注册成功");
-//        }
-//        else if(message.startsWith("REGISTER_FAIL")){
-//            out.writeObject("注册失败");
-//        }
-//        else if(message.startsWith("REGISTER_USER_EXISTS")){
-//            out.writeObject("用户名已存在");
-//        }
-//        out.flush();
         try {
             SQLUtils.registerUser(username, password);
         } catch (RegisterFailException e) {
@@ -120,7 +114,6 @@ public class ClientHandler implements Runnable {
         String[] parts = request.split(":");
         String userid = parts[1];
         String friendid = parts[2];
-
         try {
 
         } catch (LoginFailException e) {
@@ -128,6 +121,17 @@ public class ClientHandler implements Runnable {
             out.flush();
         }
 
+    }
+    private void handleRequestFriends(String request) throws Exception {
+        int userId = Integer.parseInt(request.split(":")[1]);
+        String[] friends = SQLUtils.getFriends(userId);
+        StringBuilder sb = new StringBuilder("FRIENDS:");
+        for (int i = 0; i < friends.length; i++) {
+            if (i > 0) sb.append(",");
+            sb.append(friends[i]);
+        }
+        out.writeObject(sb.toString());
+        out.flush();
     }
 }
 

@@ -71,10 +71,24 @@ public class LoginJFrame extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 String username = usernameField.getText();
                 String password = new String(passwordField.getPassword());
-                if (Client.connectToServer("LOGIN:" + username + ":" + password)) {
-                    setVisible(false);
-                }
 
+                Client.ConnectionResponse response = Client.connectToServer("LOGIN:" + username + ":" + password);
+                if (response != null) {
+                    setVisible(false);
+                    try {
+                        response.out.writeObject("REQUEST_FRIENDS:" + response.userId);
+                        response.out.flush();
+
+                        Object obj = response.in.readObject();
+                        if (obj instanceof String friendsMsg && friendsMsg.startsWith("FRIENDS:")) {
+                            String[] parts = friendsMsg.split(":", 2);
+                            String[] friendNames = parts[1].split(",");
+                            new FriendListFrame(response.userId, friendNames, response.socket, response.in, response.out);
+                        }
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(null, "获取好友列表失败：" + ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
             }
         });
 
