@@ -56,6 +56,8 @@ public class ClientHandler implements Runnable {
                             ms.close();
                         } else if (message.startsWith("ADD_FRIEND")) {
 
+                        }else if(message.startsWith("REQUEST_FRIENDS")) {
+                            handleRequestFriends(message);
                         }
                     }
                 } catch (IOException e) {
@@ -130,6 +132,7 @@ public class ClientHandler implements Runnable {
             if (i > 0) sb.append(",");
             sb.append(friends[i]);
         }
+        System.out.println("Send Message:"+sb.toString()+" to user:"+userId);
         out.writeObject(sb.toString());
         out.flush();
     }

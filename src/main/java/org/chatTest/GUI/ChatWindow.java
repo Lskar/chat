@@ -3,6 +3,8 @@ package org.chatTest.GUI;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.*;
 import java.net.*;
 import java.util.Date;
@@ -24,7 +26,14 @@ public class ChatWindow extends JFrame {
         setSize(500, 400);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
-
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                // 窗口关闭前,在这里实现要处理的操作
+                udpSocket.close();
+                super.windowClosing(e);
+            }
+        });
         initializeUI();
         startUDPListener();
     }
@@ -98,6 +107,7 @@ public class ChatWindow extends JFrame {
                     }
                 } catch (IOException ex) {
                     ex.printStackTrace();
+                    break;
                 }
             }
         }).start();

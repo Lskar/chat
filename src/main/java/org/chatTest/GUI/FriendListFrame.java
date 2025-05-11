@@ -6,6 +6,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.DatagramSocket;
 import java.net.Socket;
 
 public class FriendListFrame extends JFrame {
@@ -38,13 +39,26 @@ public class FriendListFrame extends JFrame {
             label.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    int friendId = Integer.parseInt(friend.replace("User", ""));
-                    new ChatWindow(currentUserId, friendId);
+                    if (isPortAvailable(currentUserId)) {
+                        int friendId = Integer.parseInt(friend.replace("User", ""));
+                        new ChatWindow(currentUserId, friendId);
+                    }
+                    else {
+                        JOptionPane.showMessageDialog(label, "与该好友的聊天窗口已打开", "错误", JOptionPane.ERROR_MESSAGE);
+                    }
                 }
             });
             panel.add(label);
         }
 
         add(panel);
+    }
+    public static boolean isPortAvailable(int port) {
+        try (DatagramSocket serverSocket = new DatagramSocket(port+9999)) {
+            serverSocket.close();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
