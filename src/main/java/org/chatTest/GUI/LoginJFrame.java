@@ -78,11 +78,13 @@ public class LoginJFrame extends JFrame {
                     try {
                         response.out.writeObject("REQUEST_FRIENDS:" + response.userId);
                         response.out.flush();
+
                         Object obj = response.in.readObject();
                         if (obj instanceof String friendsMsg && friendsMsg.startsWith("FRIENDS:")) {
                             String[] parts = friendsMsg.split(":", 2);
                             String[] friendNames = parts[1].split(",");
                             new FriendListFrame(response.userId, friendNames, response.socket, response.in, response.out);
+                            new ChatRoomJFrame(response.userId, response.socket, response.in, response.out);
                         }
                     } catch (Exception ex) {
                         JOptionPane.showMessageDialog(null, "获取好友列表失败：" + ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
@@ -100,7 +102,7 @@ public class LoginJFrame extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String username = usernameField.getText();
-                String password;
+                String password = null;
                 if((password = new String(passwordField.getPassword())).isEmpty()) {
                     JOptionPane.showMessageDialog(passwordField, "密码不能为空", "错误", JOptionPane.ERROR_MESSAGE);
                 }
@@ -125,6 +127,4 @@ public class LoginJFrame extends JFrame {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new LoginJFrame());
     }
-
-
 }

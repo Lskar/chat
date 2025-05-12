@@ -7,7 +7,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
-public class ChatJFrame extends JFrame {
+public class ChatRoomJFrame extends JFrame {
     private int userId;
     private JTextArea chatArea;
     private JTextField inputField;
@@ -15,7 +15,7 @@ public class ChatJFrame extends JFrame {
     private ObjectInputStream in;
     private Socket socket;
 
-    public ChatJFrame(int userId, Socket socket, ObjectInputStream in, ObjectOutputStream out) {
+    public ChatRoomJFrame(int userId, Socket socket, ObjectInputStream in, ObjectOutputStream out) {
         this.userId = userId;
         this.socket = socket;
         this.in = in;
@@ -66,6 +66,7 @@ public class ChatJFrame extends JFrame {
             try {
                 out.writeObject("MESSAGE:" + userId + ":" + message);
                 out.flush(); // ⚠️ 每次都要 flush
+                System.out.println("send message to server: " + message);
                 chatArea.append("我 (" + userId + "): " + message + "\n");
                 inputField.setText("");
             } catch (IOException e) {
@@ -79,8 +80,8 @@ public class ChatJFrame extends JFrame {
         try {
             while (!socket.isClosed()) {
                 Object obj = in.readObject();
-                if (obj instanceof String) {
-                    String response = (String) obj;
+                if (obj instanceof String response) {
+                    System.out.println("receive message from server: " + response);
                     if (response.startsWith("MESSAGE:")) {
                         String[] parts = response.split(":", 3);
                         if (parts.length == 3) {
