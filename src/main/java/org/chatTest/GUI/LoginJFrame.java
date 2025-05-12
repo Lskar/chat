@@ -101,7 +101,7 @@ public class LoginJFrame extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String username = usernameField.getText();
-                String password = null;
+                String password;
                 if((password = new String(passwordField.getPassword())).isEmpty()) {
                     JOptionPane.showMessageDialog(passwordField, "密码不能为空", "错误", JOptionPane.ERROR_MESSAGE);
                 }
@@ -126,4 +126,6 @@ public class LoginJFrame extends JFrame {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new LoginJFrame());
     }
+
+
 }

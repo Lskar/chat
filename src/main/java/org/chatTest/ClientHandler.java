@@ -24,24 +24,10 @@ public class ClientHandler implements Runnable {
         try {
             in = new ObjectInputStream(socket.getInputStream());
             out = new ObjectOutputStream(socket.getOutputStream());
-
-            String request = (String) in.readObject();
-            if (request.startsWith("REGISTER")) {
-                handleRegister(request);
-            }
-            if (request.startsWith("LOGIN")) {
-                handleLogin(request);
-            }
-            if (request.startsWith("REQUEST_FRIENDS")) {
-                handleRequestFriends(request);
-            }
-
-
-
             while (true) {
                 try {
                     if (in.readObject() instanceof String message) {
-                        System.out.println("Received: " + message);///////////
+                        System.out.println("Received: " + message);
                         if (message.startsWith("MESSAGE")) {
                             //组播发送端代码
                             // 创建MulticastSocket对象
@@ -54,9 +40,21 @@ public class ClientHandler implements Runnable {
                             ms.send(dp);
                             //释放资源
                             ms.close();
-                        } else if (message.startsWith("ADD_FRIEND")) {
+                        }
 
-                        }else if(message.startsWith("REQUEST_FRIENDS")) {
+                        else if (message.startsWith("REGISTER")) {
+                            handleRegister(message);
+                        }
+                        else if (message.startsWith("LOGIN")) {
+                            handleLogin(message);
+                        }
+                        else if (message.startsWith("ADD_FRIEND")) {
+                            handleAddFriends(message);
+                        }
+                        else if (message.startsWith("ADD_FRIEND")) {
+
+                        }
+                        else if(message.startsWith("REQUEST_FRIENDS")) {
                             handleRequestFriends(message);
                         }
                     }
