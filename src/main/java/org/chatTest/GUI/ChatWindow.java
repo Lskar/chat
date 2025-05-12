@@ -16,14 +16,13 @@ public class ChatWindow extends JFrame {
     private JTextArea chatArea;
     private JTextField inputField;
     private DatagramSocket udpSocket;
-    private Thread udpListener;
 
     public ChatWindow(int selfId, int targetId) {
         this.selfId = selfId;
         this.targetId = targetId;
         this.udpSocket = createUDPSocket();
 
-        setTitle("我(id"+selfId+")与 用户" + targetId + " 的聊天");
+        setTitle("与 用户" + targetId + " 的聊天");
         setSize(500, 400);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -31,7 +30,6 @@ public class ChatWindow extends JFrame {
             @Override
             public void windowClosing(WindowEvent e) {
                 // 窗口关闭前,在这里实现要处理的操作
-                udpListener.interrupt();//无法关闭线程
                 udpSocket.close();
                 super.windowClosing(e);
             }
@@ -42,7 +40,7 @@ public class ChatWindow extends JFrame {
 
     private DatagramSocket createUDPSocket() {
         try {
-            return new DatagramSocket(9999 + selfId*10+targetId); // 每个用户绑定不同端口,,暂时这样分配
+            return new DatagramSocket(9999 + selfId); // 每个用户绑定不同端口
         } catch (SocketException e) {
             e.printStackTrace();
             return null;
@@ -75,9 +73,8 @@ public class ChatWindow extends JFrame {
             byte[] buffer = fullMessage.getBytes();
             try {
                 InetAddress address = InetAddress.getByName("localhost");
-                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, 9999 + targetId*10+selfId);
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, 9999 + targetId);
                 udpSocket.send(packet);
-                System.out.println("send message to friend: " + fullMessage);
                 chatArea.append("我 (" + selfId + ")：" + message + "\n");
                 saveMessageToFile(selfId, targetId, message, true);
                 inputField.setText("");
@@ -88,7 +85,7 @@ public class ChatWindow extends JFrame {
     }
 
     private void startUDPListener() {
-        udpListener = new Thread(() -> {
+        new Thread(() -> {
             byte[] buffer = new byte[1024];
             while (!udpSocket.isClosed()) {
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
@@ -96,7 +93,6 @@ public class ChatWindow extends JFrame {
                     udpSocket.setSoTimeout(100); // 设置超时时间，避免无限阻塞
                     udpSocket.receive(packet);
                     String received = new String(packet.getData(), 0, packet.getLength());
-                    System.out.println("receive"+received);
                     if (received.startsWith("MESSAGE")) {
                         String[] parts = received.split(":", 4);
                         int from = Integer.parseInt(parts[1]);
@@ -117,8 +113,7 @@ public class ChatWindow extends JFrame {
                     break;
                 }
             }
-        });
-        udpListener.start();
+        }).start();
     }
 
     private void saveMessageToFile(int from, int to, String message, boolean isSend) {
