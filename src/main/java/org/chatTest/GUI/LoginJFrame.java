@@ -78,7 +78,6 @@ public class LoginJFrame extends JFrame {
                     try {
                         response.out.writeObject("REQUEST_FRIENDS:" + response.userId);
                         response.out.flush();
-
                         Object obj = response.in.readObject();
                         if (obj instanceof String friendsMsg && friendsMsg.startsWith("FRIENDS:")) {
                             String[] parts = friendsMsg.split(":", 2);
