@@ -90,9 +90,10 @@ public class ChatWindow extends JFrame {
     private void startUDPListener() {
         udpListener = new Thread(() -> {
             byte[] buffer = new byte[1024];
-            while (true) {
+            while (!udpSocket.isClosed()) {
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 try {
+                    udpSocket.setSoTimeout(100); // 设置超时时间，避免无限阻塞
                     udpSocket.receive(packet);
                     String received = new String(packet.getData(), 0, packet.getLength());
                     System.out.println("receive"+received);
@@ -109,6 +110,8 @@ public class ChatWindow extends JFrame {
                             saveMessageToFile(from, to, msg, false);
                         }
                     }
+                } catch (SocketTimeoutException ex) {
+                    // 超时，继续循环
                 } catch (IOException ex) {
                     ex.printStackTrace();
                     break;

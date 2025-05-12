@@ -20,9 +20,23 @@ public class ClientHandler implements Runnable {
 
     @Override
     public void run() {
+
         try {
             in = new ObjectInputStream(socket.getInputStream());
             out = new ObjectOutputStream(socket.getOutputStream());
+
+            String request = (String) in.readObject();
+            if (request.startsWith("REGISTER")) {
+                handleRegister(request);
+            }
+            if (request.startsWith("LOGIN")) {
+                handleLogin(request);
+            }
+            if (request.startsWith("REQUEST_FRIENDS")) {
+                handleRequestFriends(request);
+            }
+
+
 
             while (true) {
                 try {
@@ -38,19 +52,12 @@ public class ClientHandler implements Runnable {
                             DatagramPacket dp = new DatagramPacket(bytes, bytes.length, address, port);
                             //调用MulticastSocket发送数据方法发送数据
                             ms.send(dp);
-                            System.out.println("Sent " + message + " to all clients");
                             //释放资源
                             ms.close();
                         } else if (message.startsWith("ADD_FRIEND")) {
 
-                        } else if (message.startsWith("REQUEST_FRIENDS")) {
+                        }else if(message.startsWith("REQUEST_FRIENDS")) {
                             handleRequestFriends(message);
-                        } else if (message.startsWith("LOGIN")) {
-                            handleLogin(message);
-                        } else if (message.startsWith("REGISTER")) {
-                            handleRegister(message);
-                        } else if (message.startsWith("CHECK_ONLINE")) {
-
                         }
                     }
                 } catch (IOException e) {
@@ -117,7 +124,6 @@ public class ClientHandler implements Runnable {
         }
 
     }
-
     private void handleRequestFriends(String request) throws Exception {
         int userId = Integer.parseInt(request.split(":")[1]);
         String[] friends = SQLUtils.getFriends(userId);
@@ -126,21 +132,9 @@ public class ClientHandler implements Runnable {
             if (i > 0) sb.append(",");
             sb.append(friends[i]);
         }
-        System.out.println("Send Message:" + sb.toString() + " to user:" + userId);
+        System.out.println("Send Message:"+sb.toString()+" to user:"+userId);
         out.writeObject(sb.toString());
         out.flush();
-    }
-
-    private void handleRequestAimIdIsOnline(String request) throws Exception {
-        String[] parts = request.split(":");
-        String userid = parts[1];
-        String friendid = parts[2];
-        try {
-
-        } catch (LoginFailException e) {
-            out.writeObject("查看失败" + e.getMessage());
-            out.flush();
-        }
     }
 }
 
