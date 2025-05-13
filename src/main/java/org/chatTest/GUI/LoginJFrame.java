@@ -72,6 +72,7 @@ public class LoginJFrame extends JFrame {
             if (response != null) {
                 setVisible(false);
                 new FriendListFrame(response.userId, response.socket, response.in, response.out);
+                //new ChatRoomJFrame(response.userId, response.socket, response.in, response.out);
             }
         });
 

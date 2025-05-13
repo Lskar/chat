@@ -32,19 +32,13 @@ public class ChatWindow extends JFrame {
             @Override
             public void windowClosing(WindowEvent e) {
                 // 窗口关闭前,在这里实现要处理的操作
-                udpListener.interrupt();//无法关闭线程
+                stopUDPListener();
                 udpSocket.close();
                 super.windowClosing(e);
             }
         });
         initializeUI();
         startUDPListener();
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                stopUDPListener();
-            }
-        });
     }
 
     private DatagramSocket createUDPSocket() {
