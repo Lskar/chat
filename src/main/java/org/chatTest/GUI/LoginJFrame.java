@@ -4,8 +4,6 @@ import org.chatTest.Client;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class LoginJFrame extends JFrame {
     private JTextField usernameField;
@@ -66,30 +64,14 @@ public class LoginJFrame extends JFrame {
         loginButton.setBackground(new Color(0x4A90E2));
         loginButton.setForeground(Color.WHITE);
         loginButton.setFocusPainted(false);
-        loginButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String username = usernameField.getText();
-                String password = new String(passwordField.getPassword());
+        loginButton.addActionListener(_ -> {
+            String username = usernameField.getText();
+            String password = new String(passwordField.getPassword());
 
-                Client.ConnectionResponse response = Client.connectToServer("LOGIN:" + username + ":" + password);
-                if (response != null) {
-                    setVisible(false);
-                    try {
-                        response.out.writeObject("REQUEST_FRIENDS:" + response.userId);
-                        response.out.flush();
-
-                        Object obj = response.in.readObject();
-                        if (obj instanceof String friendsMsg && friendsMsg.startsWith("FRIENDS:")) {
-                            String[] parts = friendsMsg.split(":", 2);
-                            String[] friendNames = parts[1].split(",");
-                            new FriendListFrame(response.userId, friendNames, response.socket, response.in, response.out);
-                            new ChatRoomJFrame(response.userId, response.socket, response.in, response.out);
-                        }
-                    } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(null, "获取好友列表失败：" + ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
-                    }
-                }
+            Client.ConnectionResponse response = Client.connectToServer("LOGIN:" + username + ":" + password);
+            if (response != null) {
+                setVisible(false);
+                new FriendListFrame(response.userId, response.socket, response.in, response.out);
             }
         });
 
@@ -98,17 +80,14 @@ public class LoginJFrame extends JFrame {
         registerButton.setBackground(new Color(0x50C878));
         registerButton.setForeground(Color.WHITE);
         registerButton.setFocusPainted(false);
-        registerButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String username = usernameField.getText();
-                String password = null;
-                if((password = new String(passwordField.getPassword())).isEmpty()) {
-                    JOptionPane.showMessageDialog(passwordField, "密码不能为空", "错误", JOptionPane.ERROR_MESSAGE);
-                }
-                else
-                    Client.connectToServer("REGISTER:" + username + ":" + password);
+        registerButton.addActionListener(_ -> {
+            String username = usernameField.getText();
+            String password;
+            if((password = new String(passwordField.getPassword())).isEmpty()) {
+                JOptionPane.showMessageDialog(passwordField, "密码不能为空", "错误", JOptionPane.ERROR_MESSAGE);
             }
+            else
+                Client.connectToServer("REGISTER:" + username + ":" + password);
         });
 
         buttonPanel.add(loginButton);
@@ -124,7 +103,4 @@ public class LoginJFrame extends JFrame {
         setVisible(true);
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new LoginJFrame());
-    }
 }

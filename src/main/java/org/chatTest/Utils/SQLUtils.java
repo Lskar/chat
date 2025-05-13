@@ -160,5 +160,22 @@ public class SQLUtils {
             close(conn, ps, rs);
         }
     }
+    public static String[] getFriendsWithStatus(int userId) throws SQLException {
+        String sql = "SELECT f.friend_id, u.status FROM friends f JOIN users u ON f.friend_id = u.id WHERE f.user_id = ?";
+        List<String> friendsWithStatus = new ArrayList<>();
 
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                int friendId = rs.getInt("friend_id");
+                String status = rs.getString("status");
+                friendsWithStatus.add("User" + friendId + ":" + status.toLowerCase());
+            }
+        }
+        return friendsWithStatus.toArray(new String[0]);
+    }
 }

@@ -17,6 +17,7 @@ public class ChatWindow extends JFrame {
     private JTextField inputField;
     private DatagramSocket udpSocket;
     private Thread udpListener;
+    private volatile boolean isRunning = true;
 
     public ChatWindow(int selfId, int targetId) {
         this.selfId = selfId;
@@ -38,6 +39,12 @@ public class ChatWindow extends JFrame {
         });
         initializeUI();
         startUDPListener();
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                stopUDPListener();
+            }
+        });
     }
 
     private DatagramSocket createUDPSocket() {
@@ -87,15 +94,16 @@ public class ChatWindow extends JFrame {
         }
     }
 
+
     private void startUDPListener() {
         udpListener = new Thread(() -> {
             byte[] buffer = new byte[1024];
-            while (true) {
+            while (isRunning) { // 检查标志位
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 try {
                     udpSocket.receive(packet);
                     String received = new String(packet.getData(), 0, packet.getLength());
-                    System.out.println("receive"+received);
+                    System.out.println("receive" + received);
                     if (received.startsWith("MESSAGE")) {
                         String[] parts = received.split(":", 4);
                         int from = Integer.parseInt(parts[1]);
@@ -106,12 +114,18 @@ public class ChatWindow extends JFrame {
                             SwingUtilities.invokeLater(() -> {
                                 chatArea.append("用户 " + from + ": " + msg + "\n");
                             });
-                            saveMessageToFile(from, to, msg, false);
                         }
                     }
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                    break;
+                } catch (SocketException e) {
+                    if (isRunning) { // 如果标志位为 true，说明是异常关闭
+                        e.printStackTrace();
+                        JOptionPane.showMessageDialog(this, "UDP 监听异常: " + e.getMessage());
+                    }
+                    break; // 退出循环
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(this, "UDP 监听异常: " + e.getMessage());
+                    break; // 退出循环
                 }
             }
         });
@@ -127,4 +141,19 @@ public class ChatWindow extends JFrame {
             e.printStackTrace();
         }
     }
+    private void stopUDPListener() {
+        isRunning = false; // 设置标志位为 false
+        if (udpSocket != null && !udpSocket.isClosed()) {
+            udpSocket.close(); // 关闭 udpSocket
+        }
+        if (udpListener != null) {
+            try {
+                udpListener.join(); // 等待监听线程结束
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
 }

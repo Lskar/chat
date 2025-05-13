@@ -120,13 +120,12 @@ public class ClientHandler implements Runnable {
 
     private void handleRequestFriends(String request) throws Exception {
         int userId = Integer.parseInt(request.split(":")[1]);
-        String[] friends = SQLUtils.getFriends(userId);
+        String[] friendsWithStatus = SQLUtils.getFriendsWithStatus(userId);
         StringBuilder sb = new StringBuilder("FRIENDS:");
-        for (int i = 0; i < friends.length; i++) {
-            if (i > 0) sb.append(",");
-            sb.append(friends[i]);
+        for (String friend : friendsWithStatus) {
+            if (sb.length() > 8) sb.append(",");
+            sb.append(friend);
         }
-        System.out.println("Send Message:" + sb.toString() + " to user:" + userId);
         out.writeObject(sb.toString());
         out.flush();
     }
@@ -142,6 +141,7 @@ public class ClientHandler implements Runnable {
             out.flush();
         }
     }
+
 }
 
 
