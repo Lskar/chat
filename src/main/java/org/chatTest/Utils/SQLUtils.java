@@ -178,4 +178,17 @@ public class SQLUtils {
         }
         return friendsWithStatus.toArray(new String[0]);
     }
+    public static int changeStatus(int userId, String status){
+        String sql = "UPDATE users SET status = ? WHERE id = ?";
+        try(Connection conn = getConnection();
+           PreparedStatement ps = conn.prepareStatement(sql)){
+            ps.setString(1, status);
+            ps.setInt(2, userId);
+            return ps.executeUpdate();
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+            return -1;
+        }
+    }
 }

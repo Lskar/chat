@@ -40,6 +40,7 @@ public class FriendListFrame extends JFrame {
         setVisible(true);
 
         new Thread(this::startListeningForMessages).start();
+        requestChangeStatus("online");
         requestFriendsList();
     }
 
@@ -121,8 +122,10 @@ public class FriendListFrame extends JFrame {
 
         logoutButton.addActionListener(e -> {
             try {
+                requestChangeStatus("offline");
                 socket.close();
                 dispose();
+                System.exit(1);
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
@@ -174,8 +177,9 @@ public class FriendListFrame extends JFrame {
                 if (obj instanceof String message) {
                     if (message.startsWith("FRIENDS:")) {
                         updateFriendsList(message);
+//                        updateFriendStatus(message);
                     } else if (message.startsWith("STATUS:")) {
-                        updateFriendStatus(message);
+//                        updateFriendStatus(message);
                     }
                 }
             }
@@ -192,6 +196,15 @@ public class FriendListFrame extends JFrame {
             e.printStackTrace();
         }
     }
+    private void requestChangeStatus(String status){
+        try {
+            out.writeObject("CHANGE_STATUS:" + currentUserId+":"+status);
+            out.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     private void updateFriendsList(String message) {
         String[] parts = message.split(":", 2);

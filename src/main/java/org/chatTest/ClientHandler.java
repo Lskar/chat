@@ -49,8 +49,8 @@ public class ClientHandler implements Runnable {
                             handleLogin(message);
                         } else if (message.startsWith("REGISTER")) {
                             handleRegister(message);
-                        } else if (message.startsWith("CHECK_ONLINE")) {
-
+                        } else if (message.startsWith("CHANGE_STATUS")) {
+                            changeStatus(message);
                         }
                     }
                 } catch (IOException e) {
@@ -130,19 +130,19 @@ public class ClientHandler implements Runnable {
         out.flush();
     }
 
-    private void handleRequestAimIdIsOnline(String request) throws Exception {
+
+    private void changeStatus(String request) throws Exception {
         String[] parts = request.split(":");
         String userid = parts[1];
-        String friendid = parts[2];
+        String status = parts[2];
         try {
-
+            SQLUtils.changeStatus(Integer.parseInt(userid), status);
         } catch (LoginFailException e) {
-            out.writeObject("查看失败" + e.getMessage());
+            out.writeObject("修改失败" + e.getMessage());
             out.flush();
         }
+
     }
-
 }
-
 
 
