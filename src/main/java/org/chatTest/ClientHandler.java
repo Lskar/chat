@@ -43,6 +43,7 @@ public class ClientHandler implements Runnable {
                             ms.close();
                         } else if (message.startsWith("ADD_FRIEND")) {
 
+
                         } else if (message.startsWith("REQUEST_FRIENDS")) {
                             handleRequestFriends(message);
                         } else if (message.startsWith("LOGIN")) {

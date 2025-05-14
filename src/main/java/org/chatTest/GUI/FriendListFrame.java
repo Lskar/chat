@@ -4,17 +4,15 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.DatagramSocket;
 import java.net.Socket;
-import java.net.SocketException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.*;
 
 public class FriendListFrame extends JFrame {
     private int currentUserId;
@@ -24,17 +22,13 @@ public class FriendListFrame extends JFrame {
     private JTextField searchField;
 
     private JPanel friendListPanel;
-    private Thread serverListener;
-    private volatile boolean exit;
     private Map<String, Boolean> friendStatusMap = new HashMap<>();
-    private ArrayList<ChatWindow> friednChatWindows = new ArrayList<>();
 
     public FriendListFrame(int userId, Socket socket, ObjectInputStream in, ObjectOutputStream out) {
         this.currentUserId = userId;
         this.socket = socket;
         this.in = in;
         this.out = out;
-        exit=false;
 
         setTitle("我（id" + currentUserId + "）的好友列表");
         setSize(300, 600);
@@ -45,7 +39,7 @@ public class FriendListFrame extends JFrame {
         initializeUI();
         setVisible(true);
 
-        (serverListener = new Thread(this::startListeningForMessages)).start();
+        new Thread(this::startListeningForMessages).start();
         requestChangeStatus("online");
         requestFriendsList();
     }
@@ -126,35 +120,16 @@ public class FriendListFrame extends JFrame {
         styleButton(logoutButton, Color.GRAY);
         styleButton(refreshButton, Color.GRAY);
 
-
-
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                // 窗口关闭前,在这里实现要处理的操作
-                logoutButton.doClick();
-                super.windowClosing(e);
-            }
-        });
-
         logoutButton.addActionListener(e -> {
             try {
-                    requestChangeStatus("offline");
-                    for (ChatWindow chatwindow : friednChatWindows) {
-                        chatwindow.dispose();//关闭子窗口
-                    }
-                    exit=true;
-                    serverListener.join();
-                    socket.close();
-                    dispose();
-                    System.exit(1);
-            } catch (SocketException ex) {
-                throw new RuntimeException(ex);
+                requestChangeStatus("offline");
+                socket.close();
+                dispose();
+                System.exit(1);
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
-        }
-        );
+        });
 
         refreshButton.addActionListener(e -> requestFriendsList());
 
@@ -198,44 +173,13 @@ public class FriendListFrame extends JFrame {
     private void startListeningForMessages() {
         try {
             while (!socket.isClosed()) {
-                if (exit) {
-                    //处理中断逻辑
-                    return;
-                }
-                else {
-
-                    final ExecutorService exec = Executors.newFixedThreadPool(1);
-                    Callable<String> call = new Callable<String>() {
-                        public String call() throws Exception {
-                            //开始执行耗时操作
-                            Object obj = in.readObject();
-                            return (String) obj;
-                        }
-                    };
-
-                    String obj = null;
-                    try {
-                        Future<String> future = exec.submit(call);
-                        obj = future.get(1000 * 1, TimeUnit.MILLISECONDS);
-                        System.out.println("任务成功返回:" + obj);
-                    } catch (TimeoutException ex) {
-
-                    } catch (Exception e) {
-                        System.out.println("处理失败.");
-                        e.printStackTrace();
-                    }
-                    // 关闭线程池
-                    exec.shutdown();
-
-
-                    //Object obj = in.readObject();
-                    if (obj instanceof String message) {
-                        if (message.startsWith("FRIENDS:")) {
-                            updateFriendsList(message);
+                Object obj = in.readObject();
+                if (obj instanceof String message) {
+                    if (message.startsWith("FRIENDS:")) {
+                        updateFriendsList(message);
 //                        updateFriendStatus(message);
-                        } else if (message.startsWith("STATUS:")) {
+                    } else if (message.startsWith("STATUS:")) {
 //                        updateFriendStatus(message);
-                        }
                     }
                 }
             }
@@ -252,10 +196,9 @@ public class FriendListFrame extends JFrame {
             e.printStackTrace();
         }
     }
-
-    private void requestChangeStatus(String status) {
+    private void requestChangeStatus(String status){
         try {
-            out.writeObject("CHANGE_STATUS:" + currentUserId + ":" + status);
+            out.writeObject("CHANGE_STATUS:" + currentUserId+":"+status);
             out.flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -323,7 +266,7 @@ public class FriendListFrame extends JFrame {
             public void mouseClicked(MouseEvent e) {
                 int friendId = Integer.parseInt(friendName.replace("User", ""));
                 if (isPortAvailable(currentUserId, friendId)) {
-                    friednChatWindows.add(new ChatWindow(currentUserId, friendId));
+                    new ChatWindow(currentUserId, friendId);
                 } else {
                     JOptionPane.showMessageDialog(entryPanel, "与该好友的聊天窗口已打开", "错误", JOptionPane.ERROR_MESSAGE);
                 }
