@@ -11,6 +11,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.DatagramSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -177,12 +178,14 @@ public class FriendListFrame extends JFrame {
                 if (obj instanceof String message) {
                     if (message.startsWith("FRIENDS:")) {
                         updateFriendsList(message);
-//                        updateFriendStatus(message);
-                    } else if (message.startsWith("STATUS:")) {
-//                        updateFriendStatus(message);
+
                     }
                 }
             }
+        } catch (SocketException e) {
+            // Socket 已关闭，主动退出监听
+            System.out.println("连接已关闭，停止监听");
+
         } catch (Exception e) {
             e.printStackTrace();
         }
