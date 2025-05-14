@@ -4,8 +4,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -15,6 +14,7 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.*;
 
 public class FriendListFrame extends JFrame {
     private int currentUserId;
@@ -25,6 +25,7 @@ public class FriendListFrame extends JFrame {
 
     private JPanel friendListPanel;
     private Thread serverListener;
+    private volatile boolean exit;
     private Map<String, Boolean> friendStatusMap = new HashMap<>();
     private ArrayList<ChatWindow> friednChatWindows = new ArrayList<>();
 
@@ -33,6 +34,7 @@ public class FriendListFrame extends JFrame {
         this.socket = socket;
         this.in = in;
         this.out = out;
+        exit=false;
 
         setTitle("我（id" + currentUserId + "）的好友列表");
         setSize(300, 600);
@@ -124,23 +126,35 @@ public class FriendListFrame extends JFrame {
         styleButton(logoutButton, Color.GRAY);
         styleButton(refreshButton, Color.GRAY);
 
-        logoutButton.addActionListener(e -> {
-            try {
-                requestChangeStatus("offline");
-                for (ChatWindow chatwindow : friednChatWindows) {
-                    chatwindow.dispose();//关闭子窗口
-                }
-                serverListener.interrupt();
-                socket.close();
 
-                dispose();
-                System.exit(1);
-            } catch (SocketException ex) {
 
-            }catch (Exception ex) {
-                ex.printStackTrace();
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                // 窗口关闭前,在这里实现要处理的操作
+                logoutButton.doClick();
+                super.windowClosing(e);
             }
         });
+
+        logoutButton.addActionListener(e -> {
+            try {
+                    requestChangeStatus("offline");
+                    for (ChatWindow chatwindow : friednChatWindows) {
+                        chatwindow.dispose();//关闭子窗口
+                    }
+                    exit=true;
+                    serverListener.join();
+                    socket.close();
+                    dispose();
+                    System.exit(1);
+            } catch (SocketException ex) {
+                throw new RuntimeException(ex);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+        );
 
         refreshButton.addActionListener(e -> requestFriendsList());
 
@@ -184,12 +198,37 @@ public class FriendListFrame extends JFrame {
     private void startListeningForMessages() {
         try {
             while (!socket.isClosed()) {
-                if (Thread.currentThread().isInterrupted()) {
+                if (exit) {
                     //处理中断逻辑
                     return;
                 }
                 else {
-                    Object obj = in.readObject();
+
+                    final ExecutorService exec = Executors.newFixedThreadPool(1);
+                    Callable<String> call = new Callable<String>() {
+                        public String call() throws Exception {
+                            //开始执行耗时操作
+                            Object obj = in.readObject();
+                            return (String) obj;
+                        }
+                    };
+
+                    String obj = null;
+                    try {
+                        Future<String> future = exec.submit(call);
+                        obj = future.get(1000 * 1, TimeUnit.MILLISECONDS);
+                        System.out.println("任务成功返回:" + obj);
+                    } catch (TimeoutException ex) {
+
+                    } catch (Exception e) {
+                        System.out.println("处理失败.");
+                        e.printStackTrace();
+                    }
+                    // 关闭线程池
+                    exec.shutdown();
+
+
+                    //Object obj = in.readObject();
                     if (obj instanceof String message) {
                         if (message.startsWith("FRIENDS:")) {
                             updateFriendsList(message);
