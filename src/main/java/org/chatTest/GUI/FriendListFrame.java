@@ -59,10 +59,14 @@ public class FriendListFrame extends JFrame {
         friendListPanel = new JPanel();
         friendListPanel.setLayout(new BoxLayout(friendListPanel, BoxLayout.Y_AXIS));
         friendListPanel.setBackground(Color.WHITE);
+        friendListPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0)); // 上下各留出10px空白
 
         JScrollPane scrollPane = new JScrollPane(friendListPanel);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.getViewport().setBackground(Color.WHITE);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS); // 始终显示垂直滚动条
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER); // 禁用水平滚动条
+
 
         mainPanel.add(scrollPane, BorderLayout.CENTER);
 
@@ -189,6 +193,7 @@ public class FriendListFrame extends JFrame {
             while (!socket.isClosed()) {
                 Object obj = in.readObject();
                 if (obj instanceof String message) {
+                    System.out.println("receive :"+ message);
                     if (message.startsWith("FRIENDS:")) {
                         updateFriendsList(message);
 
@@ -226,7 +231,8 @@ public class FriendListFrame extends JFrame {
         String[] parts = message.split(":", 2);
         String[] friendStatusPairs = parts[1].split(",");
         friendListPanel.removeAll();
-
+        if(friendStatusPairs.length == 1)
+            return;
         for (String pair : friendStatusPairs) {
             String[] data = pair.split(":", 2); // 分割好友名和状态
             String friendName = data[0];
@@ -258,6 +264,10 @@ public class FriendListFrame extends JFrame {
     private JPanel createFriendEntry(String friendName, boolean isOnline) {
         JPanel entryPanel = new JPanel(new BorderLayout());
         entryPanel.setBackground(Color.WHITE);
+        entryPanel.setMinimumSize(new Dimension(280, 60));
+        entryPanel.setMaximumSize(new Dimension(280, 60));
+        entryPanel.setOpaque(true);friendListPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0)); // 上下各留出10px空白
+
         entryPanel.setBorder(BorderFactory.createCompoundBorder(
                 new MatteBorder(0, 0, 1, 0, new Color(240, 240, 240)),
                 new EmptyBorder(10, 15, 10, 15)));
@@ -276,6 +286,9 @@ public class FriendListFrame extends JFrame {
         contentPanel.setOpaque(false);
 
         entryPanel.add(contentPanel, BorderLayout.CENTER);
+
+        // 设置固定大小
+        entryPanel.setPreferredSize(new Dimension(280, 60)); // 固定宽度和高度
 
         entryPanel.addMouseListener(new MouseAdapter() {
             @Override
@@ -301,6 +314,7 @@ public class FriendListFrame extends JFrame {
 
         return entryPanel;
     }
+
 
     private static boolean isPortAvailable(int selfId, int friendId) {
         try (DatagramSocket serverSocket = new DatagramSocket(selfId * 10 + friendId + 9999)) {
