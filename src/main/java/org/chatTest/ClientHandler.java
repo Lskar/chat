@@ -42,8 +42,7 @@ public class ClientHandler implements Runnable {
                             //释放资源
                             ms.close();
                         } else if (message.startsWith("ADD_FRIEND")) {
-
-
+                            handleAddFriends(message);
                         } else if (message.startsWith("REQUEST_FRIENDS")) {
                             handleRequestFriends(message);
                         } else if (message.startsWith("LOGIN")) {
@@ -94,6 +93,8 @@ public class ClientHandler implements Runnable {
 
         try {
             Map<String, Object> result = SQLUtils.loginUser(username, password);
+            //不允许同时重复登陆未做
+
             if (result.containsKey("userId")) {
                 int userId = (int) result.get("userId");
                 out.writeObject("LOGIN_SUCCESS:" + userId);
@@ -111,7 +112,7 @@ public class ClientHandler implements Runnable {
         String userid = parts[1];
         String friendid = parts[2];
         try {
-
+            SQLUtils.establishFriends(Integer.parseInt(userid), Integer.parseInt(friendid));
         } catch (LoginFailException e) {
             out.writeObject("添加失败" + e.getMessage());
             out.flush();

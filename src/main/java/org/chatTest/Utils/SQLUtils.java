@@ -112,6 +112,49 @@ public class SQLUtils {
             }
         }
     }
+
+
+    public static void establishFriends(int id1, int id2) throws Exception {
+        String checkSql = "SELECT * FROM friends WHERE user_id = ? AND friend_id = ?";
+        String insertSql = "INSERT INTO friends (user_id, friend_id) VALUES (?, ?)";
+        Connection conn = null;
+        PreparedStatement checkPs = null;
+        PreparedStatement insertPs = null;
+        try {
+            conn = getConnection();
+            checkPs = conn.prepareStatement(checkSql);
+            insertPs = conn.prepareStatement(insertSql);
+            // 开启事务
+            startTransaction(conn);
+
+            // 检查是否已经是好友
+            checkPs.setInt(1, id1);
+            checkPs.setInt(2, id2);
+            ResultSet rs = checkPs.executeQuery();
+            if (rs.next()) {
+                throw new RuntimeException("好友关系已存在");
+            }
+
+            // 插入双向好友关系
+            insertPs.setInt(1, id1);
+            insertPs.setInt(2, id2);
+            insertPs.executeUpdate();
+
+            insertPs.setInt(1, id2);
+            insertPs.setInt(2, id1);
+            insertPs.executeUpdate();
+
+            // 提交事务
+            commitTransaction(conn);
+        } catch (SQLException e) {
+            // 回滚事务
+            rollbackTransaction(conn);
+            throw new RuntimeException("添加好友失败: " + e.getMessage());
+        } finally {
+            close(conn, checkPs, null);
+        }
+    }
+
     public static String[] getFriends(int userId) throws SQLException {
         String sql = "SELECT friend_id FROM friends WHERE user_id = ?";
         List<String> friends = new ArrayList<>();
@@ -128,6 +171,25 @@ public class SQLUtils {
             }
         }
         return friends.toArray(new String[0]);
+    }
+
+    public static String[] getFriendsWithStatus(int userId) throws SQLException {
+        String sql = "SELECT f.friend_id, u.status FROM friends f JOIN users u ON f.friend_id = u.id WHERE f.user_id = ?";
+        List<String> friendsWithStatus = new ArrayList<>();
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                int friendId = rs.getInt("friend_id");
+                String status = rs.getString("status");
+                friendsWithStatus.add("User" + friendId + ":" + status.toLowerCase());
+            }
+        }
+        return friendsWithStatus.toArray(new String[0]);
     }
 
     public static Map<String, Object> loginUser(String username, String password) throws Exception{
@@ -159,24 +221,6 @@ public class SQLUtils {
         finally {
             close(conn, ps, rs);
         }
-    }
-    public static String[] getFriendsWithStatus(int userId) throws SQLException {
-        String sql = "SELECT f.friend_id, u.status FROM friends f JOIN users u ON f.friend_id = u.id WHERE f.user_id = ?";
-        List<String> friendsWithStatus = new ArrayList<>();
-
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setInt(1, userId);
-            ResultSet rs = ps.executeQuery();
-
-            while (rs.next()) {
-                int friendId = rs.getInt("friend_id");
-                String status = rs.getString("status");
-                friendsWithStatus.add("User" + friendId + ":" + status.toLowerCase());
-            }
-        }
-        return friendsWithStatus.toArray(new String[0]);
     }
     public static int changeStatus(int userId, String status){
         String sql = "UPDATE users SET status = ? WHERE id = ?";

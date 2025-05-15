@@ -6,6 +6,8 @@ import javax.swing.border.MatteBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -69,6 +71,8 @@ public class FriendListFrame extends JFrame {
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
         add(mainPanel);
+
+
     }
 
     private JPanel createTopPanel() {
@@ -120,6 +124,15 @@ public class FriendListFrame extends JFrame {
 
         styleButton(logoutButton, Color.GRAY);
         styleButton(refreshButton, Color.GRAY);
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                // 窗口关闭前,在这里实现要处理的操作
+                logoutButton.doClick();
+                super.windowClosing(e);
+            }
+        });
 
         logoutButton.addActionListener(e -> {
             try {
