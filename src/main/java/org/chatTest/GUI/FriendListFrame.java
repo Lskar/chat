@@ -230,8 +230,9 @@ public class FriendListFrame extends JFrame {
     private void updateFriendsList(String message) {
         String[] parts = message.split(":", 2);
         String[] friendStatusPairs = parts[1].split(",");
+        System.out.println(friendStatusPairs.length);
         friendListPanel.removeAll();
-        if(friendStatusPairs.length == 1)
+        if(message.length()== 8)
             return;
         for (String pair : friendStatusPairs) {
             String[] data = pair.split(":", 2); // 分割好友名和状态
