@@ -81,6 +81,7 @@ public class ChatWindow extends JFrame {
                 System.out.println("send message to friend: " + fullMessage);
                 chatArea.append("我 (" + selfId + ")：" + message + "\n");
                 saveMessageToFile(selfId, targetId, message, true);
+                saveMessageToFile(targetId, selfId, message, false);
                 inputField.setText("");
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(this, "发送失败: " + ex.getMessage());
@@ -127,14 +128,32 @@ public class ChatWindow extends JFrame {
     }
 
     private void saveMessageToFile(int from, int to, String message, boolean isSend) {
-        String filename = "chat_history_" + Math.min(from, to) + "_" + Math.max(from, to) + ".txt";
+        // 定义存储根目录
+        String storageRoot = "STORAGE";
+        // 创建用户文件夹路径
+        String userDir = storageRoot + "/user" + from;
+        String filename = userDir + "/toUser" + to + ".txt";
+
+        // 创建文件夹（如果不存在）
+        File dir = new File(userDir);
+        if (!dir.exists()) {
+            boolean created = dir.mkdirs(); // 创建所有必要的父文件夹
+            if (!created) {
+                System.err.println("无法创建文件夹: " + userDir);
+                return;
+            }
+        }
+        // 构造消息内容
+        String line = (isSend ? "我 (" + from + ")" : "对方 (" + from + ")") + ": " + message;
+        // 写入文件
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename, true))) {
-            writer.write((isSend ? "我 (" + from + ")" : "对方 (" + from + ")") + ": " + message + " [" + new Date() + "]");
+            writer.write(line);
             writer.newLine();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
     private void stopUDPListener() {
         isRunning = false; // 设置标志位为 false
         if (udpSocket != null && !udpSocket.isClosed()) {
