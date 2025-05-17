@@ -57,12 +57,21 @@ public class ChatWindow extends JFrame {
 
         inputField = new JTextField();
         JButton sendButton = new JButton("发送");
+        JButton historyButton = new JButton("历史"); // 新增的历史按钮
 
         sendButton.addActionListener(this::sendMessage);
+        historyButton.addActionListener(e -> loadHistoryMessages()); // 绑定事件
 
         JPanel inputPanel = new JPanel(new BorderLayout());
         inputPanel.add(inputField, BorderLayout.CENTER);
-        inputPanel.add(sendButton, BorderLayout.EAST);
+
+// 创建按钮面板，用于容纳发送和历史按钮
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        buttonPanel.add(historyButton);
+        buttonPanel.add(sendButton);
+
+        inputPanel.add(buttonPanel, BorderLayout.EAST);
+
 
         add(scrollPane, BorderLayout.CENTER);
         add(inputPanel, BorderLayout.SOUTH);
@@ -144,12 +153,35 @@ public class ChatWindow extends JFrame {
             }
         }
         // 构造消息内容
-        String line = (isSend ? "我 (" + from + ")" : "对方 (" + from + ")") + ": " + message;
+        String line = (isSend ? "我 (" + from + ")" : "用户 (" + from + ")") + ": " + message;
         // 写入文件
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename, true))) {
             writer.write(line);
             writer.newLine();
         } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    private void loadHistoryMessages() {
+        String storageRoot = "STORAGE";
+        String userDir = storageRoot + "/user" + selfId;
+        String filename = userDir + "/toUser" + targetId + ".txt";
+
+        File file = new File(filename);
+
+        if (!file.exists()) {
+            JOptionPane.showMessageDialog(this, "暂无历史记录", "提示", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            chatArea.setText(""); // 清空当前聊天内容
+            String line;
+            while ((line = reader.readLine()) != null) {
+                chatArea.append(line + "\n"); // 每行追加到聊天区域
+            }
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "无法读取历史记录: " + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
     }
