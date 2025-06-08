@@ -7,6 +7,8 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.*;
 import java.net.*;
+import java.nio.file.*;
+import java.util.Base64;
 import java.util.Date;
 
 public class ChatWindow extends JFrame {
@@ -31,7 +33,6 @@ public class ChatWindow extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                // 窗口关闭前,在这里实现要处理的操作
                 stopUDPListener();
                 udpSocket.close();
                 super.windowClosing(e);
@@ -43,7 +44,9 @@ public class ChatWindow extends JFrame {
 
     private DatagramSocket createUDPSocket() {
         try {
-            return new DatagramSocket(9999 + selfId*10+targetId); // 每个用户绑定不同端口,,暂时这样分配
+            DatagramSocket socket = new DatagramSocket(9999 + selfId*10+targetId);
+            socket.setReceiveBufferSize(1024 * 1024); // 增加接收缓冲区
+            return socket;
         } catch (SocketException e) {
             e.printStackTrace();
             return null;
@@ -57,21 +60,23 @@ public class ChatWindow extends JFrame {
 
         inputField = new JTextField();
         JButton sendButton = new JButton("发送");
-        JButton historyButton = new JButton("历史"); // 新增的历史按钮
+        JButton historyButton = new JButton("历史");
+        JButton fileButton = new JButton("文件"); // 新增文件按钮
 
         sendButton.addActionListener(this::sendMessage);
-        historyButton.addActionListener(e -> loadHistoryMessages()); // 绑定事件
+        historyButton.addActionListener(e -> loadHistoryMessages());
+        fileButton.addActionListener(e -> sendFile()); // 绑定文件发送
 
         JPanel inputPanel = new JPanel(new BorderLayout());
-        inputPanel.add(inputField, BorderLayout.CENTER);
 
-// 创建按钮面板，用于容纳发送和历史按钮
+        // 创建按钮面板
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         buttonPanel.add(historyButton);
         buttonPanel.add(sendButton);
+        buttonPanel.add(fileButton); // 添加文件按钮到面板
 
+        inputPanel.add(inputField, BorderLayout.CENTER);
         inputPanel.add(buttonPanel, BorderLayout.EAST);
-
 
         add(scrollPane, BorderLayout.CENTER);
         add(inputPanel, BorderLayout.SOUTH);
@@ -87,7 +92,6 @@ public class ChatWindow extends JFrame {
                 InetAddress address = InetAddress.getByName("localhost");
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, 9999 + targetId*10+selfId);
                 udpSocket.send(packet);
-                System.out.println("send message to friend: " + fullMessage);
                 chatArea.append("我 (" + selfId + ")：" + message + "\n");
                 saveMessageToFile(selfId, targetId, message, true);
                 saveMessageToFile(targetId, selfId, message, false);
@@ -98,63 +102,109 @@ public class ChatWindow extends JFrame {
         }
     }
 
-
     private void startUDPListener() {
         udpListener = new Thread(() -> {
-            byte[] buffer = new byte[1024];
-            while (isRunning) { // 检查标志位
+            byte[] buffer = new byte[1024 * 1024]; // 1MB缓冲区
+            while (isRunning) {
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 try {
                     udpSocket.receive(packet);
                     String received = new String(packet.getData(), 0, packet.getLength());
-                    System.out.println("receive" + received);
                     if (received.startsWith("MESSAGE")) {
                         String[] parts = received.split(":", 4);
                         int from = Integer.parseInt(parts[1]);
                         int to = Integer.parseInt(parts[2]);
                         String msg = parts[3];
-
                         if (to == selfId && from == targetId) {
                             SwingUtilities.invokeLater(() -> {
                                 chatArea.append("用户 " + from + ": " + msg + "\n");
                             });
                         }
                     }
-                } catch (SocketException e) {
-                    if (isRunning) { // 如果标志位为 true，说明是异常关闭
-                        e.printStackTrace();
-                        JOptionPane.showMessageDialog(this, "UDP 监听异常: " + e.getMessage());
+                    // 新增文件接收处理
+                    else if (received.startsWith("FILE")) {
+                        String[] parts = received.split(":", 5);
+                        int from = Integer.parseInt(parts[1]);
+                        int to = Integer.parseInt(parts[2]);
+                        String fileName = parts[3];
+                        byte[] fileData = Base64.getDecoder().decode(parts[4]);
+
+                        if (to == selfId && from == targetId) {
+                            saveReceivedFile(fileName, fileData);
+                            SwingUtilities.invokeLater(() ->
+                                    chatArea.append("收到文件: " + fileName + "\n"));
+                        }
                     }
-                    break; // 退出循环
+                } catch (SocketException e) {
+                    if (isRunning) {
+                        JOptionPane.showMessageDialog(this, "UDP监听异常: " + e.getMessage());
+                    }
+                    break;
                 } catch (IOException e) {
-                    e.printStackTrace();
-                    JOptionPane.showMessageDialog(this, "UDP 监听异常: " + e.getMessage());
-                    break; // 退出循环
+                    JOptionPane.showMessageDialog(this, "UDP监听异常: " + e.getMessage());
+                    break;
                 }
             }
         });
         udpListener.start();
     }
 
+    // 新增文件发送方法
+    private void sendFile() {
+        JFileChooser fileChooser = new JFileChooser();
+        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+            try {
+                byte[] fileData = Files.readAllBytes(selectedFile.toPath());
+                String fileName = selectedFile.getName();
+
+                // 构造文件传输消息
+                String message = "FILE:" + selfId + ":" + targetId + ":" + fileName + ":" + Base64.getEncoder().encodeToString(fileData);
+                byte[] buffer = message.getBytes();
+
+                // 使用临时Socket发送
+                try (DatagramSocket sendSocket = new DatagramSocket()) {
+                    InetAddress address = InetAddress.getByName("localhost");
+                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length,
+                            address, 9999 + targetId*10 + selfId);
+                    sendSocket.send(packet);
+                }
+
+                chatArea.append("已发送文件: " + fileName + "\n");
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(this, "文件发送失败: " + ex.getMessage());
+            }
+        }
+    }
+
+    // 新增文件保存方法
+    private void saveReceivedFile(String fileName, byte[] fileData) {
+        // ✅ 使用 selfId 构建路径，确保文件保存在接收方的目录下
+        String storagePath = "STORAGE/user" + selfId + "/received/";
+
+        File dir = new File(storagePath);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        try (FileOutputStream fos = new FileOutputStream(storagePath + fileName)) {
+            fos.write(fileData);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void saveMessageToFile(int from, int to, String message, boolean isSend) {
-        // 定义存储根目录
         String storageRoot = "STORAGE";
-        // 创建用户文件夹路径
         String userDir = storageRoot + "/user" + from;
         String filename = userDir + "/toUser" + to + ".txt";
 
-        // 创建文件夹（如果不存在）
         File dir = new File(userDir);
         if (!dir.exists()) {
-            boolean created = dir.mkdirs(); // 创建所有必要的父文件夹
-            if (!created) {
-                System.err.println("无法创建文件夹: " + userDir);
-                return;
-            }
+            dir.mkdirs();
         }
-        // 构造消息内容
+
         String line = (isSend ? "我 (" + from + ")" : "用户 (" + from + ")") + ": " + message;
-        // 写入文件
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename, true))) {
             writer.write(line);
             writer.newLine();
@@ -162,6 +212,7 @@ public class ChatWindow extends JFrame {
             e.printStackTrace();
         }
     }
+
     private void loadHistoryMessages() {
         String storageRoot = "STORAGE";
         String userDir = storageRoot + "/user" + selfId;
@@ -175,10 +226,10 @@ public class ChatWindow extends JFrame {
         }
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            chatArea.setText(""); // 清空当前聊天内容
+            chatArea.setText("");
             String line;
             while ((line = reader.readLine()) != null) {
-                chatArea.append(line + "\n"); // 每行追加到聊天区域
+                chatArea.append(line + "\n");
             }
         } catch (IOException e) {
             JOptionPane.showMessageDialog(this, "无法读取历史记录: " + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
@@ -187,18 +238,16 @@ public class ChatWindow extends JFrame {
     }
 
     private void stopUDPListener() {
-        isRunning = false; // 设置标志位为 false
+        isRunning = false;
         if (udpSocket != null && !udpSocket.isClosed()) {
-            udpSocket.close(); // 关闭 udpSocket
+            udpSocket.close();
         }
         if (udpListener != null) {
             try {
-                udpListener.join(); // 等待监听线程结束
+                udpListener.join();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
     }
-
-
 }

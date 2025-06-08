@@ -65,7 +65,7 @@ public class ChatRoomJFrame extends JFrame {
         if (!message.isEmpty()) {
             try {
                 out.writeObject("MESSAGE:" + userId + ":" + message);
-                out.flush(); // ⚠️ 每次都要 flush
+                out.flush(); //每次都要 flush
                 System.out.println("send message to server: " + message);
                 chatArea.append("我 (" + userId + "): " + message + "\n");
                 inputField.setText("");
